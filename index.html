@@ -455,6 +455,53 @@
       .nav-links li:last-child { border-bottom: none; }
       .nav-links a { display: block; padding: 14px 0; font-size: 1.1rem; }
     }
+
+    /* ── MUSIC PLAYER ───────────────────────────────────── */
+    /*
+      Upload your song as theme.mp3 to your GitHub repo
+      (same folder as index.html). The player will find
+      it automatically. Keep file under 8MB.
+      Rename any song to theme.mp3 before uploading.
+    */
+    .music-player {
+      position: fixed; bottom: 28px; left: 28px; z-index: 200;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .music-btn {
+      position: relative;
+      width: 50px; height: 50px; border-radius: 50%;
+      background: var(--red);
+      border: 2px solid rgba(255,255,255,.25);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(200,16,46,.5);
+      transition: transform .2s, box-shadow .2s;
+      flex-shrink: 0;
+    }
+    .music-btn:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(200,16,46,.65); }
+    .music-btn svg { pointer-events: none; }
+    .music-label {
+      background: rgba(3,5,12,.92);
+      border: 1px solid rgba(200,16,46,.25); border-radius: 3px;
+      padding: 6px 14px;
+      font-family: var(--font-c); font-size: .8rem; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+      white-space: nowrap;
+      opacity: 0; transform: translateX(-8px);
+      transition: opacity .25s, transform .25s;
+      pointer-events: none;
+    }
+    .music-player:hover .music-label { opacity: 1; transform: translateX(0); }
+    @keyframes pulse-ring {
+      0%   { transform: scale(1);    opacity: .65; }
+      100% { transform: scale(1.6);  opacity: 0; }
+    }
+    .music-btn.playing::before {
+      content: '';
+      position: absolute; inset: -7px; border-radius: 50%;
+      border: 2px solid var(--red);
+      animation: pulse-ring 1.5s ease-out infinite;
+    }
   </style>
 </head>
 <body>
@@ -1041,28 +1088,31 @@
     else btt.classList.remove('visible');
   });
 
-  /* ── 8. VISIT COUNTER (localStorage, seed 135) ───────── */
-  (function() {
-    const KEY = 'max77_visits';
-    const SEED = 135;
-    let count = parseInt(localStorage.getItem(KEY) || '0', 10);
-    if (count < SEED) count = SEED;
-    count++;
-    localStorage.setItem(KEY, count);
+  /* ── 8. VISIT COUNTER — CountAPI (real global counter) ─
+     Counts every visit from every device worldwide.
+     Base offset 378 so counter starts at 378.
+     Check live count: https://api.countapi.xyz/get/maxmarkakos77/visits
+  ──────────────────────────────────────────────────── */
+  (async function() {
     const el = document.getElementById('visit-count');
-    if (el) {
-      // Animate the counter up to the current value
-      const start = count - 1;
-      const duration = 1200;
-      const startTime = performance.now();
+    if (!el) return;
+    const BASE = 378;
+    try {
+      const res  = await fetch('https://api.countapi.xyz/hit/maxmarkakos77/visits');
+      const data = await res.json();
+      const target = (data.value || 1) + BASE;
+      const duration = 1400;
+      const t0 = performance.now();
       function tick(now) {
-        const p = Math.min((now - startTime) / duration, 1);
+        const p = Math.min((now - t0) / duration, 1);
         const eased = 1 - Math.pow(1 - p, 3);
-        el.textContent = Math.floor(start + eased);
+        el.textContent = Math.floor(eased * target).toLocaleString();
         if (p < 1) requestAnimationFrame(tick);
-        else el.textContent = count;
+        else el.textContent = target.toLocaleString();
       }
       requestAnimationFrame(tick);
+    } catch(e) {
+      el.textContent = BASE.toLocaleString();
     }
   })();
 
@@ -1104,5 +1154,58 @@
   }
 </script>
 
+
+<!-- ═══════════════════════════════════════════════════
+     MUSIC PLAYER
+     1. Get your song as an MP3 file
+     2. Rename it exactly: theme.mp3
+     3. Upload theme.mp3 to your GitHub repo
+        (same folder as index.html)
+     4. Done — floating red button plays/pauses it
+     Browser note: Chrome/Safari block autoplay until
+     the visitor clicks or taps anywhere on the page.
+     On mobile it starts on first tap automatically.
+═══════════════════════════════════════════════════ -->
+<audio id="bg-audio" src="theme.mp3" preload="auto" loop></audio>
+
+<div class="music-player">
+  <button class="music-btn" id="music-btn" aria-label="Toggle music">
+    <svg class="icon-play"  width="18" height="18" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    <svg class="icon-pause" width="18" height="18" viewBox="0 0 24 24" fill="white" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+  </button>
+  <span class="music-label" id="music-label-text">Play Music</span>
+</div>
+
+<script>
+  /* ── MUSIC PLAYER ────────────────────────────────────── */
+  (function() {
+    const audio = document.getElementById("bg-audio");
+    const btn   = document.getElementById("music-btn");
+    const label = document.getElementById("music-label-text");
+    if (!audio || !btn) return;
+    let playing = false;
+    function setPlaying(state) {
+      playing = state;
+      btn.classList.toggle("playing", state);
+      btn.querySelector(".icon-play").style.display  = state ? "none"  : "block";
+      btn.querySelector(".icon-pause").style.display = state ? "block" : "none";
+      if (label) label.textContent = state ? "Pause Music" : "Play Music";
+    }
+    audio.volume = 0.35;
+    audio.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+    btn.addEventListener("click", () => {
+      if (playing) { audio.pause(); setPlaying(false); }
+      else { audio.play().then(() => setPlaying(true)).catch(() => {}); }
+    });
+    function tryAutoplay() {
+      if (!playing) audio.play().then(() => setPlaying(true)).catch(() => {});
+      document.removeEventListener("click",      tryAutoplay);
+      document.removeEventListener("touchstart", tryAutoplay);
+    }
+    document.addEventListener("click",      tryAutoplay);
+    document.addEventListener("touchstart", tryAutoplay);
+    audio.addEventListener("ended", () => setPlaying(false));
+  })();
+</script>
 </body>
 </html>
