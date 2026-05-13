@@ -1088,19 +1088,20 @@
     else btt.classList.remove('visible');
   });
 
-  /* ── 8. VISIT COUNTER — CountAPI (real global counter) ─
-     Counts every visit from every device worldwide.
-     Base offset 378 so counter starts at 378.
-     Check live count: https://api.countapi.xyz/get/maxmarkakos77/visits
+  /* ── 8. VISIT COUNTER — counterapi.dev (live global counter)
+     Increments on every visit from every device worldwide.
+     BASE offset of 378 added so counter starts at 378.
+     Check your live count anytime at:
+     https://api.counterapi.dev/v1/maxmarkakos77/visits
   ──────────────────────────────────────────────────── */
   (async function() {
     const el = document.getElementById('visit-count');
     if (!el) return;
     const BASE = 378;
     try {
-      const res  = await fetch('https://api.countapi.xyz/hit/maxmarkakos77/visits');
+      const res  = await fetch('https://api.counterapi.dev/v1/maxmarkakos77/visits/up');
       const data = await res.json();
-      const target = (data.value || 1) + BASE;
+      const target = (data.count || 1) + BASE;
       const duration = 1400;
       const t0 = performance.now();
       function tick(now) {
